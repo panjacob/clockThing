@@ -8,7 +8,7 @@ export default function TemperatureWidget() {
     const [humidity, setHumidity] = useState(0)
 
     const readTemp = async () => {
-        const data = await fetchGETText("http://clock.panjacob.online/get_temp.php")
+        const data = await fetchGETText("https://clock.panjacob.online/get_temp.php")
         const dataString = data.split('\n').map(x => x.split(','))
         const lastData = dataString[dataString.length - 2]
         const temp = parseInt(lastData[1])
