@@ -17,8 +17,7 @@ function cors() {
             header("Access-Control-Allow-Headers: {$_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']}");
         exit(0);
     }
+
 }
 cors();
-
-echo file_get_contents("http://www.clock.panjacob.online/temp.txt");
 ?>
