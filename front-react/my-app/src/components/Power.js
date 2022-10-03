@@ -5,32 +5,45 @@ import {fetchGETText} from "../utilis";
 
 export default function Power() {
     const [isPower, setPower] = useState(0)
-    const [color, setColor] = useState("")
+    const [color, setColor] = useState("8")
+    const [colorClient, setColorClient] = useState("8")
 
-    const readTemp = async () => {
+    const getPowerAndColor = async () => {
         const data = (await fetchGETText("https://clock.panjacob.online/get_settings.php")).split(',')
-        console.log(data)
         setPower(parseInt(data[0]))
-        const hexString = "#" + parseInt(data[1]).toString(16);
-        console.log(hexString)
+        const hexString = "#" + parseInt(data[1]).toString(16)
+        setColorClient(hexString)
+    }
+
+    const getPowerAndColorFirstTime = async () => {
+        const data = (await fetchGETText("https://clock.panjacob.online/get_settings.php")).split(',')
+        const hexString = "#" + parseInt(data[1]).toString(16).padStart(6,'0');
+        console.log('first time color: ', hexString)
+        setColorClient(hexString)
         setColor(hexString)
     }
 
     useEffect(() => {
-        readTemp()
-        const comInterval = setInterval(readTemp,  1000);
+        getPowerAndColorFirstTime()
+        // getPowerAndColor()
+        const comInterval = setInterval(getPowerAndColor, 1000);
         return () => clearInterval(comInterval)
     }, [])
 
     const changePower = () => {
         const powerBool = !isPower ? 1 : 0
-        fetchGETText(`https://clock.panjacob.online/set_settings_client.php?power=${powerBool}&color=${color}`)
+        const colorInt = parseInt(color.replace('#', ''), 16)
+        console.log('sending changePower', powerBool, colorInt)
+        fetchGETText(`https://clock.panjacob.online/set_settings_client.php?power=${powerBool}&color=${colorInt}`)
     }
 
     const changeColor = (e) => {
         const powerBool = isPower ? 1 : 0
-        const colorInt = parseInt(e.target.value.replace('#',''), 16)
-        console.log(colorInt)
+        let colorInt = parseInt(e.target.value.replace('#', ''), 16)
+        if (colorInt === 0) colorInt = 1;
+        const colorHex = '#' + colorInt.toString(16)
+        setColor(colorHex)
+        console.log('sending changeColor', powerBool, colorInt)
         fetchGETText(`https://clock.panjacob.online/set_settings_client.php?power=${powerBool}&color=${colorInt}`)
     }
 
@@ -39,15 +52,15 @@ export default function Power() {
             <Row className={"text-center"}>
                 <Col className={""} onClick={changePower}>
                     <h1>
-                        {isPower ? <LightbulbFill className={"text-warning"}/> : <Lightbulb/>}
+                        {isPower ? <LightbulbFill style={{color: colorClient}}/> : <Lightbulb/>}
                     </h1>
                 </Col>
-                    <Col><input type={"color"} defaultValue={"#e66465"} onChange={changeColor} value={color}/></Col>
+                <Col><input type={"color"} onChange={changeColor} value={color}/></Col>
             </Row>
             <Row className={"text-center mb-3"}>
                 <Col><p className={"lead"}>{isPower ? "On" : "Off"}</p></Col>
                 <Col><p className={"lead"}>Kolor</p></Col>
             </Row>
         </>
-)
+    )
 }

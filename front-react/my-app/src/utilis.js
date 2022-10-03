@@ -22,3 +22,7 @@ export function fetchGETText(url) {
             return text
         })
 }
+
+export function zeroPad(num, places) {
+    return String(num).padStart(places, '0')
+}

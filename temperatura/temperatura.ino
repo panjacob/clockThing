@@ -32,7 +32,7 @@
 
 DHTesp dht;
 const int rs = D0, en = D1, d4 = D5, d5 = D4, d6 = D3, d7 = D2;
-LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+// LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 float HUMIDITY, TEMPERATURE;
 int MENU = 1;
 bool EDIT_MODE = false;
@@ -96,10 +96,10 @@ void setup() {
   yeelight = new Yeelight();
   yeelight->lookup();
 
-  lcd.begin(16, 2);
-  lcd.createChar(1, proggressChar);
-  lcd.createChar(2, temperatureChar);
-  lcd.createChar(3, humidityChar);
+  // lcd.begin(16, 2);
+  // lcd.createChar(1, proggressChar);
+  // lcd.createChar(2, temperatureChar);
+  // lcd.createChar(3, humidityChar);
 
   updateDatetime();
   dht.setup(DHT_PIN, DHTesp::DHT11);
@@ -126,12 +126,10 @@ void loop() {
 
   if (MENU == 1) {
     mainScreen();
-    // Serial.println(buttonClicked(MIDDLE) == true);
     if (buttonClicked(MIDDLE)) {
       Serial.print("Turning POWER to: ");
       Serial.println(!POWER);
       setBulbPower(!POWER);
-      // POWER = !POWER;
     }
   } else if (MENU == 2) setTimeScreen();
   else if (MENU == 3) setAlarmScreen();
@@ -208,36 +206,36 @@ String sendGET(String serverPath) {
 
 void mainScreen() {
   sprintf(buff, "%02d-%02d-%04d %02d:%02d", day(), month(), year(), hour(), minute());
-  lcd.setCursor(0, 0);
-  lcd.print(buff);
+  // lcd.setCursor(0, 0);
+  // lcd.print(buff);
 
-  lcd.setCursor(0, 1);
-  lcd.write(3);
+  // lcd.setCursor(0, 1);
+  // lcd.write(3);
   sprintf(buff, ":%02d%% ", int(HUMIDITY));
-  lcd.print(buff);
+  // lcd.print(buff);
 
-  lcd.write(2);
+  // lcd.write(2);
   sprintf(buff, ":%02dC", int(TEMPERATURE));
-  lcd.print(buff);
+  // lcd.print(buff);
 }
 
 bool buttonClicked(int name) {
   if (!((LAST_CLICKED + BUTTON_INTERVAL) < millis())) return false;
 
   if (analogRead(BUTTONS) > 750 && name == LEFT) {
-    lcd.clear();
+    // lcd.clear();
     LAST_CLICKED = millis();
     BRIGHTNESS = true;
     return true;
   }
   if (analogRead(BUTTONS) > 590 && analogRead(BUTTONS) < 750 && name == MIDDLE) {
-    lcd.clear();
+    // lcd.clear();
     LAST_CLICKED = millis();
     BRIGHTNESS = true;
     return true;
   }
   if (analogRead(BUTTONS) > 100 && analogRead(BUTTONS) < 590 && name == RIGHT) {
-    lcd.clear();
+    // lcd.clear();
     LAST_CLICKED = millis();
     BRIGHTNESS = true;
     return true;
@@ -255,22 +253,22 @@ int navigateMenu(int valueToAdd, int menu) {
 
 void setTimeScreen() {
   sprintf(buff, "%d: Set time", MENU);
-  lcd.setCursor(0, 0);
-  lcd.print(buff);
+  // lcd.setCursor(0, 0);
+  // lcd.print(buff);
   sprintf(buff, "%02d/%02d/%04d %02d:%02d", day(), month(), year(), hour(), minute());
-  lcd.setCursor(0, 1);
-  lcd.print(buff);
+  // lcd.setCursor(0, 1);
+  // lcd.print(buff);
 }
 
 void setAlarmScreen() {
   sprintf(buff, "%d: Alarm 1", MENU);
-  lcd.setCursor(0, 0);
-  lcd.print(buff);
+  // lcd.setCursor(0, 0);
+  // lcd.print(buff);
 
 
   sprintf(buff, "%02d:  %02d:%02d", weekday(), 0, 0);
-  lcd.setCursor(0, 1);
-  lcd.print(buff);
+  // lcd.setCursor(0, 1);
+  // lcd.print(buff);
 }
 
 // void initializeDate2() {
@@ -294,12 +292,9 @@ void updateDatetime() {
 }
 
 void updatePower() {
-  Serial.println("Checking time: ");
-  String dateStr = sendGET("http://clock.panjacob.online/get_settings_client.php");
-  bool power = dateStr.substring(0,1).toInt(); 
-  int color = dateStr.substring(2).toInt();
-  Serial.print("Color: ");
-  Serial.println(color);
+  String response = sendGET("http://clock.panjacob.online/get_settings_client.php");
+  bool power = response.substring(0,1).toInt(); 
+  int color = response.substring(2).toInt();
   if (power != POWER) setBulbPower(power);
   if (color != COLOR) setBulbColor(color);
   LAST_POWER_UPDATE = millis();
@@ -335,10 +330,10 @@ void updateAlarms() {
 
 void alarmScreen() {
   MENU = 4;
-  lcd.clear();
+  // lcd.clear();
   sprintf(buff, "%d: Pobudka!!", MENU);
-  lcd.setCursor(0, 0);
-  lcd.print(buff);
+  // lcd.setCursor(0, 0);
+  // lcd.print(buff);
   setBulbColor(COLOR_WAKE_UP);
   setBulbPower(true);
   Serial.println("TEST TEST TEST ALARM!!!");
@@ -346,50 +341,65 @@ void alarmScreen() {
 
 void setBulbPower(bool isPower) {
   String power = isPower ? "on" : "off";
-  Serial.println("Turn " + power + "bulb.");
-  for (int i = 0; i < 100; i++) {
+  // Serial.println("Turn " + power + "bulb.");
+  for (int i = 0; i < 10; i++) {
     sendCommandX("set_power", "[\"" + power + "\", \"smooth\", 500]");
     deserializeJson(jsonBuffer, yeelight->sendCommand("get_prop", "[\"power\"]"));
     JsonObject root = jsonBuffer.as<JsonObject>();
     String state = root["result"][0];
-    Serial.printf("Power is: %s\n", state);
+    // Serial.printf("State is: %s\n", state);
 
-    if (state == power) {
-      Serial.println("Light is on, exiting");
+    if (state == "null"){
+      // Serial.println("Power is null exiting loop setBulbPower. Setting power to 0");
+      POWER = 0;
+      sendSettings();
       break;
     }
-    Serial.println("Trying again in loop");
+    else if (state == power) {
+      // Serial.println("State = power, OK.");
+      POWER = isPower;
+      sendSettings();
+      break;
+    }
+    // Serial.println("Trying again in loop");
     Alarm.delay(BULB_DELAY_REQUEST);
   }
-  POWER = isPower;
-  sendSettings();
 }
 
 void setBulbColor(int color) {
   String colorStr = String(color);
-  Serial.println("Turn on bulb.");
-  for (int i = 0; i < 100; i++) {
+  Serial.print("Changing color to: ");
+  Serial.println(colorStr);
+
+  for (int i = 0; i < 10; i++) {
     sendCommandX("set_rgb", "[" + colorStr + ", \"smooth\", 500]");
     deserializeJson(jsonBuffer, yeelight->sendCommand("get_prop", "[\"rgb\"]"));
     JsonObject root = jsonBuffer.as<JsonObject>();
     String rgb = root["result"][0];
     Serial.print("Color is: ");
-    Serial.println(colorStr);
-
-    if (rgb == colorStr) {
+    Serial.println(rgb);
+    
+    if(rgb == "null"){
+      Serial.println("Color is null exiting loop setBulbColor. Setting color to requested");
+      COLOR = color;
+      sendSettings();
+      break;
+    }
+    else if (rgb == colorStr) {
       Serial.println("Colors does match, exiting");
+      COLOR = color;
+      sendSettings();      
       break;
     }
     Serial.println("Trying again in loop");
     Alarm.delay(BULB_DELAY_REQUEST);
   }
-  COLOR = color;
-  sendSettings();
 }
 
 void sendCommandX(String command, String values) {
   do {
-    Serial.println("Sending command to bulb.");
+    Serial.print("sendCommandX: ");
+    Serial.println(values);
     Serial.println(yeelight->sendCommand(command, values));
   } while (yeelight->feedback());
 }

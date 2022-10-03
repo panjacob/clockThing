@@ -1,1 +1,8 @@
 
+body {
+    background-color: #edece3;
+}
+
+.list-group {
+    background-color: #e8e8e8 !important;
+}
