@@ -1,0 +1,12 @@
+{
+    "configurations": [
+        {
+            "type": "command",
+            "name": "php run",
+            "program": "C:/xampp/php/php.exe",
+            "args": ["-S", "localhost:8000"],
+            "workingDir": "backend/",
+        },
+
+    ],
+}

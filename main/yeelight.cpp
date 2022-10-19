@@ -109,6 +109,10 @@ void Yeelight::parseFeedback(char* buffer, size_t len)
 
 String Yeelight::sendCommand(String method, String params)
 {
+  // int clientConnect = _client.connect(_server, _port);
+  // clientConnect = 1;
+  // Serial.print("Client connect: ");
+  // Serial.println(clientConnect);
   if (_client.connect(_server, _port)) {
     String payload = String("") + "{\"id\":" + (++_cmdid) + ",\"method\":\"" + method + "\",\"params\":" + params + "}";
     _client.println(payload);
