@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set("Europe/Warsaw");
 function cors() {
 
     // Allow from any origin
@@ -20,4 +21,18 @@ function cors() {
 
 }
 cors();
+
+function console($data)
+{
+    ob_start();
+    var_dump($data);
+    error_log(ob_get_clean(), 4);
+}
+
+function epochToTime($epoch){
+    $dt = new DateTime("@$epoch");
+    $dt->setTimezone(new DateTimeZone("Europe/Warsaw"));
+    return $dt->format('H:i');
+}
+
 ?>

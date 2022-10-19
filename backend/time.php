@@ -1,6 +1,5 @@
 <?php
 require('utilis.php');
 
-$date = date('d-m-Y H:i:s');
-echo $date;
+echo date('d-m-Y H:i:s');
 ?>
