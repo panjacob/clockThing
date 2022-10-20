@@ -34,5 +34,3 @@ function epochToTime($epoch){
     $dt->setTimezone(new DateTimeZone("Europe/Warsaw"));
     return $dt->format('H:i');
 }
-
-?>

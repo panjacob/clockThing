@@ -25,15 +25,15 @@
 #define MIDDLE 2
 #define RIGHT 3
 #define SCREEN_PIN 8
-#define BACKLIGHT_TIME 10 * 1000
-#define MENU_COUNT 3
+#define BACKLIGHT_TIME 30 * 1000
+#define MENU_COUNT 4
 #define TEMPERATURE_INTERVAL 10 * 1000
 #define TEMPERATURE_INTERVAL_SEND 5 * 60 * 1000
 #define DATETIME_UPDATE_INTERVAL 60 * 60 * 1000
 #define POWER_UPDATE_INTERVAL 1500
 #define ALARM_UPDATE_INTERVAL 1 * 60 * 1000
 #define BUTTON_INTERVAL 250
-#define SCREEN_REFRESH_INTERVAL 500
+#define SCREEN_REFRESH_INTERVAL 2000
 #define MOVEMENT_UPDATE_INTERVAL 500
 #define BULB_DELAY_REQUEST 2000
 
@@ -60,8 +60,23 @@ unsigned int COLOR = 16777215;
 bool MOVEMENT = false;
 String last_alarm_datetime = "";
 AlarmId alarmIds[7];
+struct weather {
+  float temp = 0;
+  float feels_like = 0;
+  int pressure = 0;
+  int humidity = 0;
+  int uvi = 0;
+  float wind = 0;
+  int clouds = 0;
+  String sunrise = "";
+  String sunset = "";
+  String desc1 = "";
+  String desc2 = "";
+};
 
-StaticJsonDocument<200> jsonBuffer;
+weather Weather;
+
+StaticJsonDocument<300> jsonBuffer;
 Yeelight* yeelight;
 
 
@@ -72,6 +87,7 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Starting...");
   connectToWiFi("Marta_NET", "mIsIo412pysIo");
+  updateWeather();
 
   yeelight = new Yeelight();
   yeelight->lookup();
@@ -83,12 +99,33 @@ void setup() {
   lcd.createChar(3, humidityChar);
   lcd.createChar(4, movementTrueChar);
   lcd.createChar(5, movementFalseChar);
+  lcd.createChar(6, pressureChar);
+  lcd.createChar(7, windChar);
+  lcd.createChar(8, cloudChar);
 
   pinMode(BUTTONS, INPUT);
   pinMode(BUZZER_PIN, OUTPUT);
   updateDatetime();
   updateAlarms();
   sendSettings();
+}
+
+void updateWeather() {
+  String dataStr = sendGET("http://clock.panjacob.online/get_weather.php");
+  deserializeJson(jsonBuffer, dataStr);
+  JsonObject dataJson = jsonBuffer.as<JsonObject>();
+  Weather.temp = dataJson["temp"];
+  Weather.feels_like = dataJson["feels_like"];
+  Weather.pressure = dataJson["pressure"];
+  Weather.humidity = dataJson["humidity"];
+  Weather.uvi = dataJson["uvi"];
+  Weather.wind = dataJson["wind"];
+  Weather.clouds = dataJson["clouds"];
+  Weather.sunrise = String(dataJson["sunrise"]);
+  Weather.sunset = String(dataJson["sunset"]);
+  Weather.sunset = String(dataJson["sunset"]);
+  Weather.desc1 = String(dataJson["desc1"]);
+  Weather.desc2 = String(dataJson["desc2"]);
 }
 
 
@@ -104,14 +141,7 @@ void loop() {
   // }
   // // }
 
-  // delete yeelight;
-  // yeelight = new Yeelight();
-  // yeelight->lookup();
-
-
-
-
-  if (MENU == 4) {
+  if (MENU == 10) {
     if (buttonClicked(RIGHT) || buttonClicked(LEFT) || buttonClicked(MIDDLE)) {
       Serial.println("Disabling alarm.");
       setBulbColor(COLOR);
@@ -121,17 +151,19 @@ void loop() {
 
   if (!EDIT_MODE && buttonClicked(RIGHT)) MENU = navigateMenu(1, MENU);
   if (!EDIT_MODE && buttonClicked(LEFT)) MENU = navigateMenu(-1, MENU);
+  buttonClicked(MIDDLE);
 
   if ((LAST_SCREEN_REFRESH + SCREEN_REFRESH_INTERVAL) < millis()) {
     LAST_SCREEN_REFRESH = millis();
-    if (MENU == 1) {
-      mainScreen();
-      if (buttonClicked(MIDDLE)) {
-        Serial.println("Button clicked - bulbpowerdown");
-        setBulbPower(false);
-      }
-    } else if (MENU == 2) setTimeScreen();
-    else if (MENU == 3) setAlarmScreen();
+    MENU = navigateMenu(1, MENU);
+    if (MENU == 1) mainScreen();
+    if (MENU == 2) mainScreen2();
+    if (MENU == 3) mainScreen3();
+    if (MENU == 4) mainScreen4();
+
+
+    // else if (MENU == 2) setTimeScreen();
+    // else if (MENU == 3) setAlarmScreen();
   }
 
   if (BRIGHTNESS) lcd.backlight();
@@ -144,7 +176,7 @@ void loop() {
   if ((LAST_POWER_UPDATE + POWER_UPDATE_INTERVAL) < millis()) updatePower();
   if ((LAST_MOVEMENT_UPDATE + MOVEMENT_UPDATE_INTERVAL) < millis()) updateMovement();
 
-  // Alarm.delay(100);
+  Alarm.delay(100);
 }
 
 void updateMovement() {
@@ -192,9 +224,14 @@ void sendSettings() {
 void mainScreen() {
   sprintf(buff, "%02d-%02d %02d:%02d   ", day(), month(), hour(), minute());
   lcd.setCursor(0, 0);
+  lcd.print("                ");
+  lcd.setCursor(0, 0);
   lcd.print(buff);
   lcd.write(MOVEMENT ? 4 : 5);
+  lcd.print(" ");
 
+  lcd.setCursor(0, 1);
+  lcd.print("                ");
   lcd.setCursor(0, 1);
   lcd.write(3);
   sprintf(buff, "%02d%% ", int(HUMIDITY));
@@ -203,6 +240,59 @@ void mainScreen() {
   lcd.write(2);
   sprintf(buff, "%02dC", int(TEMPERATURE));
   lcd.print(buff);
+
+  lcd.setCursor(11, 1);
+  lcd.write(6);
+  lcd.print(String(Weather.pressure));
+}
+
+void mainScreen2() {
+  lcd.setCursor(0, 0);
+  lcd.print("                ");
+  lcd.setCursor(0, 0);
+  lcd.write(3);
+  lcd.print(String(Weather.humidity) + "% ");
+
+  lcd.write(2);
+  lcd.print(String(Weather.temp, 1) + " ");
+
+  lcd.setCursor(11,0);
+  lcd.write(4);
+  lcd.print(String(Weather.feels_like, 1) + " ");
+
+  lcd.setCursor(0, 1);
+  lcd.print("                ");
+  lcd.setCursor(0, 1);
+  lcd.write(7);
+  lcd.print(String(Weather.wind, 1) + " ");
+
+  lcd.write(8);
+  sprintf(buff, "%02d%%", Weather.clouds);
+  lcd.print(buff);
+  
+  lcd.setCursor(13, 1);
+  lcd.print("*" + String(Weather.uvi) + " ");
+}
+
+void mainScreen3() {
+  lcd.setCursor(0, 0);
+  lcd.print("                ");
+  lcd.setCursor(0, 0);
+  lcd.print("*" + Weather.sunrise + "    ");
+  lcd.print("_" + Weather.sunset + " ");
+  lcd.setCursor(0, 1);
+  lcd.print("                ");
+}
+
+void mainScreen4() {
+  lcd.setCursor(0, 0);
+  lcd.print("                ");
+  lcd.setCursor(0, 0);
+  lcd.print(Weather.desc1);
+  lcd.setCursor(0, 1);
+  lcd.print("                ");
+  lcd.setCursor(0, 1);
+  lcd.print(Weather.desc2);
 }
 
 bool buttonClicked(int name) {
@@ -308,7 +398,7 @@ void updateAlarms() {
 }
 
 void alarmScreen() {
-  MENU = 4;
+  MENU = 10;
   lcd.clear();
   sprintf(buff, "%d: Pobudka!!", MENU);
   lcd.setCursor(0, 0);
