@@ -6,8 +6,10 @@ if (!isset($_GET["from"])) echo file_get_contents("http://www.clock.panjacob.onl
 $from = $_GET["from"];
 $to = $_GET["to"];
 
-$from_time = strtotime("24-09-2022 16:40");
-$to_time = strtotime("24-09-2022 23:16");
+$from_time = strtotime($from);
+$to_time = strtotime($to);
+console($from);
+
 
 if ($from_time > $to_time) {
     $temp = $to_time;
