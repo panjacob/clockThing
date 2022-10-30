@@ -1,3 +1,4 @@
+import React  from 'react';
 import {Droplet, ThermometerHalf} from 'react-bootstrap-icons';
 import {Col, Row} from "react-bootstrap";
 import {useEffect, useState} from "react";

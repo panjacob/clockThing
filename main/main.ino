@@ -15,7 +15,16 @@
 #include <Adafruit_AM2320.h>
 #include "myWifi.hpp"
 #include "myCustomChars.hpp"
+#include "user_interface.h"
 
+// #define WIFI_NAME "UPC6946190"
+// #define WIFI_PASSWORD "dntc3gqSxfnx"
+#define WIFI_NAME "Marta_NET"
+#define WIFI_PASSWORD "mIsIo412pysIo"
+#define SECOND 1000
+#define MINUTE 60 * SECOND
+#define HOUR 60 * MINUTE
+#define DELAY 500
 #define BUTTONS A0
 #define BUZZER_PIN D1
 #define SDA_PIN D4
@@ -25,17 +34,20 @@
 #define MIDDLE 2
 #define RIGHT 3
 #define SCREEN_PIN 8
-#define BACKLIGHT_TIME 30 * 1000
-#define MENU_COUNT 4
-#define TEMPERATURE_INTERVAL 10 * 1000
-#define TEMPERATURE_INTERVAL_SEND 5 * 60 * 1000
-#define DATETIME_UPDATE_INTERVAL 60 * 60 * 1000
-#define POWER_UPDATE_INTERVAL 1500
-#define ALARM_UPDATE_INTERVAL 1 * 60 * 1000
+#define BACKLIGHT_TIME 30 * SECOND
+#define MENU_COUNT 3
+#define TEMPERATURE_INTERVAL 2 * MINUTE
+// #define TEMPERATURE_INTERVAL 30 * SECOND
+#define TEMPERATURE_INTERVAL_SEND 2 * MINUTE
+#define DATETIME_UPDATE_INTERVAL 6 * HOUR
+#define POWER_UPDATE_INTERVAL 3 * SECOND
+#define ALARM_UPDATE_INTERVAL 3 * HOUR
 #define BUTTON_INTERVAL 250
-#define SCREEN_REFRESH_INTERVAL 2000
-#define MOVEMENT_UPDATE_INTERVAL 500
-#define BULB_DELAY_REQUEST 2000
+#define SCREEN_REFRESH_INTERVAL 4 * SECOND
+#define MOVEMENT_UPDATE_INTERVAL 1 * SECOND
+#define BULB_DELAY_REQUEST 2 * SECOND
+#define WEATHER_UPDATE_INTERVAL 20 * MINUTE
+
 
 Adafruit_AM2320 am2320 = Adafruit_AM2320();
 LiquidCrystal_I2C lcd(0x27, 16, 2);
@@ -54,6 +66,7 @@ unsigned long LAST_ALARMS_UPDATE = millis();
 unsigned long LAST_SETTINGS_SEND = millis();
 unsigned long LAST_POWER_UPDATE = millis();
 unsigned long LAST_SCREEN_REFRESH = 0;
+unsigned long LAST_WEATHER_UPDATE = millis();
 unsigned long LAST_MOVEMENT_UPDATE = 0;
 unsigned int COLOR_WAKE_UP = 16775041;
 unsigned int COLOR = 16777215;
@@ -76,7 +89,7 @@ struct weather {
 
 weather Weather;
 
-StaticJsonDocument<300> jsonBuffer;
+StaticJsonDocument<400> jsonBuffer;
 Yeelight* yeelight;
 
 
@@ -86,12 +99,10 @@ void setup() {
   am2320.begin();
   Serial.begin(115200);
   Serial.println("Starting...");
-  connectToWiFi("Marta_NET", "mIsIo412pysIo");
-  updateWeather();
+  connectToWiFi(WIFI_NAME, WIFI_PASSWORD);
 
   yeelight = new Yeelight();
   yeelight->lookup();
-  // setBulbPower(false);
 
   lcd.init();
   lcd.createChar(1, proggressChar);
@@ -108,6 +119,10 @@ void setup() {
   updateDatetime();
   updateAlarms();
   sendSettings();
+  updateWeather();
+
+  // wifi_fpm_set_sleep_type(LIGHT_SLEEP_T);
+  // wifi_fpm_open();
 }
 
 void updateWeather() {
@@ -126,6 +141,7 @@ void updateWeather() {
   Weather.sunset = String(dataJson["sunset"]);
   Weather.desc1 = String(dataJson["desc1"]);
   Weather.desc2 = String(dataJson["desc2"]);
+  LAST_WEATHER_UPDATE = millis();
 }
 
 
@@ -136,14 +152,12 @@ void loop() {
   // for (int j = 100; j < 2000; j += 20) {
   //   tone(BUZZER_PIN, j);
   //   // analogWrite(BUZZER_PIN, j);
-  //   Serial.println(j);
   //   delay(1000);
   // }
   // // }
 
   if (MENU == 10) {
     if (buttonClicked(RIGHT) || buttonClicked(LEFT) || buttonClicked(MIDDLE)) {
-      Serial.println("Disabling alarm.");
       setBulbColor(COLOR);
       MENU = 1;
     }
@@ -158,12 +172,8 @@ void loop() {
     MENU = navigateMenu(1, MENU);
     if (MENU == 1) mainScreen();
     if (MENU == 2) mainScreen2();
-    if (MENU == 3) mainScreen3();
-    if (MENU == 4) mainScreen4();
-
-
-    // else if (MENU == 2) setTimeScreen();
-    // else if (MENU == 3) setAlarmScreen();
+    // if (MENU == 3) mainScreen3();
+    if (MENU == 3) mainScreen4();
   }
 
   if (BRIGHTNESS) lcd.backlight();
@@ -172,11 +182,29 @@ void loop() {
   if ((LAST_TEMPERATURE_UPDATE + TEMPERATURE_INTERVAL) < millis()) updateTemperature();
   if ((LAST_TEMPERATURE_SEND + TEMPERATURE_INTERVAL_SEND) < millis()) sendTemperature();
   if ((LAST_DATETIME_UPDATE + DATETIME_UPDATE_INTERVAL) < millis()) updateDatetime();
-  // if ((LAST_ALARMS_UPDATE + ALARM_UPDATE_INTERVAL) < millis()) updateAlarms();
+  if ((LAST_ALARMS_UPDATE + ALARM_UPDATE_INTERVAL) < millis()) updateAlarms();
   if ((LAST_POWER_UPDATE + POWER_UPDATE_INTERVAL) < millis()) updatePower();
+  if ((LAST_WEATHER_UPDATE + WEATHER_UPDATE_INTERVAL) < millis()) updateWeather();
   if ((LAST_MOVEMENT_UPDATE + MOVEMENT_UPDATE_INTERVAL) < millis()) updateMovement();
 
-  Alarm.delay(100);
+  // wifi_fpm_set_sleep_type(MODEM_SLEEP_T);
+  //   wifi_fpm_open();
+  //   // gpio_pin_wakeup_enable(D2, GPIO_PIN_INTR_HILEVEL);
+  //   Serial.println("Sleep1");
+  //   wifi_fpm_do_sleep(2e6);
+  //   Serial.println("Sleep2");
+  // // the CPU will only enter light sleep on the next idle cycle, which
+  // // can be triggered by a short delay()
+  //   delay(2001);
+  //   Serial.println("Sleep3");
+  delay(DELAY);
+  // Alarm.delay(DELAY);
+
+  // WiFi.disconnect();
+  // WiFi.forceSleepBegin();
+  // delay(500);
+  // WiFi.forceSleepWake();
+  // delay(1);
 }
 
 void updateMovement() {
@@ -214,8 +242,6 @@ void sendTemperature() {
 void sendSettings() {
   String serverPath = "http://clock.panjacob.online/set_settings.php?power=" + String(POWER) + "&color=" + String(COLOR);
   sendGET(serverPath);
-  // serverPath = "http://clock.panjacob.online/set_settings_client.php?power=" + String(POWER) + "&color=" + String(COLOR);
-  // sendGET(serverPath);
   LAST_SETTINGS_SEND = millis();
 }
 
@@ -256,7 +282,7 @@ void mainScreen2() {
   lcd.write(2);
   lcd.print(String(Weather.temp, 1) + " ");
 
-  lcd.setCursor(11,0);
+  lcd.setCursor(11, 0);
   lcd.write(4);
   lcd.print(String(Weather.feels_like, 1) + " ");
 
@@ -269,7 +295,7 @@ void mainScreen2() {
   lcd.write(8);
   sprintf(buff, "%02d%%", Weather.clouds);
   lcd.print(buff);
-  
+
   lcd.setCursor(13, 1);
   lcd.print("*" + String(Weather.uvi) + " ");
 }
@@ -298,22 +324,18 @@ void mainScreen4() {
 bool buttonClicked(int name) {
   if (!((LAST_CLICKED + BUTTON_INTERVAL) < millis())) return false;
   auto buttonValue = analogRead(BUTTONS);
-  // Serial.println(buttonValue);
 
   if (buttonValue > 750 && name == LEFT) {
-    lcd.clear();
     LAST_CLICKED = millis();
     BRIGHTNESS = true;
     return true;
   }
   if (buttonValue > 590 && buttonValue < 750 && name == MIDDLE) {
-    lcd.clear();
     LAST_CLICKED = millis();
     BRIGHTNESS = true;
     return true;
   }
   if (buttonValue > 100 && buttonValue < 590 && name == RIGHT) {
-    lcd.clear();
     LAST_CLICKED = millis();
     BRIGHTNESS = true;
     return true;
@@ -350,7 +372,6 @@ void setAlarmScreen() {
 }
 
 void updateDatetime() {
-  Serial.println("Checking time: ");
   String dateStr = sendGET("http://clock.panjacob.online/time.php");
   int h, m, s, month, day, year;
   char arr[20];
@@ -371,7 +392,6 @@ void updatePower() {
 
 void updateAlarms() {
   String request = sendGET("http://clock.panjacob.online/get_alarms.php");
-  Serial.println("Aktualizacja alarmów.");
   LAST_ALARMS_UPDATE = millis();
   int i = 19;
   String current_alarm_datetime = request.substring(0, i);
@@ -382,7 +402,6 @@ void updateAlarms() {
   int alarmIterator = -1;
   int dayIterator = 1;
   for (int j = 0; j <= request.length(); j++) Alarm.free(alarmIds[j]);
-
 
   for (i; i <= request.length(); i += 6) {
     String timeStr = request.substring(i, i + 5);
@@ -405,63 +424,7 @@ void alarmScreen() {
   lcd.print(buff);
   setBulbColor(COLOR_WAKE_UP);
   setBulbPower(true);
-  Serial.println("TEST TEST TEST ALARM!!!");
 }
-
-// void setBulbPower(bool isPower) {
-//   String power = isPower ? "on" : "off";
-//   Serial.println("setBulbPower(): Turn " + power + "bulb.");
-//   for (int i = 0; i < 10; i++) {
-//     sendCommandX("set_power", "[\"" + power + "\", \"smooth\", 500]");
-//     deserializeJson(jsonBuffer, yeelight->sendCommand("get_prop", "[\"power\"]"));
-//     JsonObject root = jsonBuffer.as<JsonObject>();
-//     String state = root["result"][0];
-//     Serial.printf("State is: %s\n", state);
-
-//     if (state == "null") {
-//       Serial.println("Power is null.");
-//       // POWER = 0;
-//       // sendSettings();
-
-//     } else if (state == power) {
-//       // Serial.println("State = power, OK.");
-//       POWER = isPower;
-//       sendSettings();
-//       break;
-//     }
-//     Serial.println("Trying again in loop");
-//     Alarm.delay(BULB_DELAY_REQUEST);
-//   }
-// }
-
-// void setBulbColor(int color) {
-//   String colorStr = String(color);
-//   Serial.print("Changing color to: ");
-//   Serial.println(colorStr);
-
-//   for (int i = 0; i < 10; i++) {
-//     sendCommandX("set_rgb", "[" + colorStr + ", \"smooth\", 500]");
-//     deserializeJson(jsonBuffer, yeelight->sendCommand("get_prop", "[\"rgb\"]"));
-//     JsonObject root = jsonBuffer.as<JsonObject>();
-//     String rgb = root["result"][0];
-//     Serial.print("Color is: ");
-//     Serial.println(rgb);
-
-//     if (rgb == "null") {
-//       Serial.println("Color is null exiting loop setBulbColor. Setting color to requested");
-//       COLOR = color;
-//       sendSettings();
-//       break;
-//     } else if (rgb == colorStr) {
-//       Serial.println("Colors does match, exiting");
-//       COLOR = color;
-//       sendSettings();
-//       break;
-//     }
-//     Serial.println("Trying again in loop");
-//     Alarm.delay(BULB_DELAY_REQUEST);
-//   }
-// }
 
 void setBulbColor(int color) {
   String colorStr = String(color);
@@ -474,13 +437,8 @@ void setBulbColor(int color) {
       JsonObject root = jsonBuffer.as<JsonObject>();
       String errorCode = root["error"]["code"];
       String errorStr = root["error"];
-      Serial.print("errorCode: ");
-      Serial.println(errorStr);
       if (errorCode == "null") {
-        Serial.print("Wszystko ok, sprawdzam czy kolor się zgadza: ");
-        Serial.println(colorStr);
       } else if (errorCode == "-1") {
-        Serial.println("Za dużo zapytań czekam 5 sekund i wychodzę");
         Alarm.delay(5000);
         break;
       }
@@ -488,14 +446,9 @@ void setBulbColor(int color) {
       deserializeJson(jsonBuffer, yeelight->sendCommand("get_prop", "[\"rgb\"]"));
       root = jsonBuffer.as<JsonObject>();
       String rgb = root["result"][0];
-      Serial.print("- color is: ");
-      Serial.println(rgb);
-      Serial.println(rgb == colorStr);
       if (rgb == NULL) {
-        Serial.println("Stan jest null, zostaje w petli");
       }
       if (rgb == colorStr) {
-        Serial.println("Zmiana koloru pomyślnie!");
         COLOR = color;
         sendSettings();
         break;
@@ -508,24 +461,10 @@ void setBulbColor(int color) {
       yeelight->lookup();
     }
   }
-  Serial.printf("Wychodzę z pętli po: %d\n", i);
 }
-
-// void sendCommandX(String command, String values) {
-//   String response = yeelight->sendCommand(command, values);
-//   Serial.print("SENDCOMMAND response: ");
-//   Serial.println(response);
-//   if (response == "") {
-//     Serial.println("SendCommandX - response is empty, looking up");
-//     Serial.println(yeelight->feedback());
-//     yeelight->lookup();
-//   }
-// }
 
 void setBulbPower(bool power) {
   String powerStr = power ? "on" : "off";
-  Serial.print("Setting bulbpower: ");
-  Serial.println(powerStr);
   int i = 0;
   for (i = 0; i <= 200; i++) {
     if (yeelight->feedback()) {
@@ -536,13 +475,8 @@ void setBulbPower(bool power) {
       JsonObject root = jsonBuffer.as<JsonObject>();
       String errorCode = root["error"]["code"];
       String errorStr = root["error"];
-      Serial.print("errorCode: ");
-      Serial.println(errorStr);
       if (errorCode == "null") {
-        Serial.print("Wszystko ok, sprawdzam czy stan się zgadza: ");
-        Serial.println(powerStr);
       } else if (errorCode == "-1") {
-        Serial.println("Za dużo zapytań o power czekam 5 sekund i wychodzę");
         Alarm.delay(5000);
         break;
       }
@@ -550,14 +484,9 @@ void setBulbPower(bool power) {
       deserializeJson(jsonBuffer, yeelight->sendCommand("get_prop", "[\"power\"]"));
       root = jsonBuffer.as<JsonObject>();
       String state = root["result"][0];
-      Serial.print("- power is: ");
-      Serial.println(state);
-      Serial.println(state == powerStr);
       if (state == NULL) {
-        Serial.println("Stan jest null, zostaje w petli");
       }
       if (state == powerStr) {
-        Serial.println("Zmiana stanu pomyślnie!");
         POWER = power;
         sendSettings();
         break;
@@ -570,5 +499,4 @@ void setBulbPower(bool power) {
       yeelight->lookup();
     }
   }
-  // Serial.printf("Wychodzę z pętli po: %d\n", i);
 }

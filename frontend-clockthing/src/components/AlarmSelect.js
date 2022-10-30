@@ -1,4 +1,5 @@
-import {useRef, useState} from "react";
+import React from 'react';
+import {useRef} from "react";
 
 export default function AlarmSelect({setAlarm, name, val}) {
     const timeRef = useRef()

@@ -1,7 +1,8 @@
+import React from 'react';
 import AlarmSelect from "./AlarmSelect";
 import {Card, Col, ListGroup, Row} from "react-bootstrap";
 import {useEffect, useState} from "react";
-import {fetchGET, fetchGETText} from "../utilis";
+import {fetchGETText} from "../utilis";
 
 export default function Alarms() {
     const [alarm1, setAlarm1] = useState("")
