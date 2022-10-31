@@ -99,27 +99,19 @@ export default function MyChart() {
     }
 
     useEffect(() => {
-        // const from = currentDateFromTo() + " 00:00"
-        // const to = currentDateFromTo() + " 23:59"
-        // console.log(currentDateFromTo())
-        // readTemp(from, to)
         updateChart()
     }, [])
 
     return (
         <>
             <h1 className={"text-center"}>Wykresy</h1>
-            <Row>
-                <Col>
-                    <input ref={dateFrom} type="datetime-local" onChange={updateChart} className={"form-control"}
-                        defaultValue={currentDateFromTo() + "T00:00"} />
-                </Col>
-                <Col>
-                    <input ref={dateTo} type="datetime-local" onChange={updateChart} className={"form-control"}
-                        defaultValue={currentDateFromTo() + "T23:59"} />
-                </Col>
-            </Row>
-            <div className="mx-auto" style={{ maxWidth: "800px" }}>
+            <div class="btn-group w-100 px-0 mx-0 pt-2 mb-5 btn-group-lg" role="group">
+                <input ref={dateFrom} type="datetime-local" onChange={updateChart} className={"form-control"}
+                    defaultValue={currentDateFromTo() + "T00:00"} />
+                <input ref={dateTo} type="datetime-local" onChange={updateChart} className={"form-control"}
+                    defaultValue={currentDateFromTo() + "T23:59"} />
+            </div>
+            <div className="mx-auto" style={{ maxWidth: "1000px" }}>
                 <Line options={options} data={dataChart} />
             </div>
         </>
